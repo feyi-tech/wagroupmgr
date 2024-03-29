@@ -35,7 +35,7 @@ server.on('upgrade', function upgrade(request, socket, head) {
 });
 
 // Websocket Express server
-const SOCK_PORT = process.env.SOCK_PORT || 7000;
+const SOCK_PORT = process.env.SOCK_PORT || config.sock_port;
 server.listen(SOCK_PORT, () => {
   console.log(`WebSocket server is listening on port ${SOCK_PORT}`);
 });
@@ -67,7 +67,7 @@ app.get('/:clientId', (req, res) => {
 });
 
 // Start Express server
-const PORT = process.env.WEB_PORT || 7001;
+const PORT = process.env.WEB_PORT || config.web_port;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
