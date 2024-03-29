@@ -4,7 +4,7 @@ const qrcode = require('qrcode-terminal')
 const WebSocket = require('ws');
 const http = require('http');
 const express = require('express');
-const { getChromePath, getRequest, waIdToPhone, testPath, phoneToGroupId, phoneToWaId, orderlySend, getObjectIndexById, getTimestampForHourAndMinute } = require('./utils')
+const { getChromePath, getRequest, waIdToPhone, testPath, phoneToGroupId, phoneToWaId, orderlySend, getObjectIndexById, getTimestampForHourAndMinute, isActionTimeAgain } = require('./utils')
 const { ADMIN, FEEDBACK_PREFIX } = require("./constants")
 
 var clientsWa = {}
@@ -399,9 +399,7 @@ const sendPosts = () => {
         let isPostingTime
         const lastSentAt = post.last_sent_at || 0
         if(post.hoursWithMinutes) {
-            const lastPostDate = new Date()
-            lastPostDate.setTime(lastSentAt)
-            nextPostTime = now >= getTimestampForHourAndMinute(post.hour, post.minute)
+            isPostingTime = isActionTimeAgain(lastSentAt, post.hoursWithMinutes)
 
         } else {
             isPostingTime = now >= lastSentAt + (post.interval * post.intervalMultiplier)

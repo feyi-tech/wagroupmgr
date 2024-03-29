@@ -180,20 +180,14 @@ const isActionTimeAgain = (lastActionTime, timeList) => {
         const actionDateTime = getTimestampForHourAndMinute(hour, minute);
         
         // If the action time is after the last action time, consider it as the next action time
-        if (actionDateTime.getTime() > lastActionTime) {
+        if (actionDateTime.getTime() > lastActionTime && currentTime >= actionDateTime.getTime()) {
             nextActionTime = actionDateTime.getTime();
             break;
         }
     }
     
-    // If nextActionTime is null, it means all action times have passed for today
-    if (nextActionTime === null) {
-        return false;
-    }
-    
-    // Check if the next action time is within 3 seconds from the current time
-    const timeDifference = nextActionTime - currentTime;
-    return timeDifference <= 3000 && timeDifference > 0; // Check if the next action time is within 3 seconds and in the future
+    // If nextActionTime is null, it means all action times have passed for today or the current time has not reached the next action time
+    return nextActionTime !== null
 }
 
 const COMMANDS_INFO = [
@@ -541,5 +535,5 @@ module.exports = {
     getChromePath,
     waIdToPhone, phoneToWaId, phoneToGroupId,
     getRequest, orderlySend, getObjectIndexById,
-    convertLocalTimeToUTC, getTimestampForHourAndMinute
+    convertLocalTimeToUTC, getTimestampForHourAndMinute, isActionTimeAgain
 }
