@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code Authentication</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .container {
+      margin-top: 50px;
+      text-align: center;
+    }
+    #qr-code {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3 id="scan-message">Please wait...</h3>
+    <div id="qr-code"></div>
+  </div>
+
+  <!-- QR Code library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script>
+  <!-- WebSocket library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/websocket/1.0.31/websocket.min.js"></script>
+  <script>
+    // Function to update the QR code
+    function updateQRCode(qrCode) {
+        if(qrCode === "ready") {
+            document.getElementById('qr-code').innerHTML = '<div></div>';
+            document.getElementById('scan-message').innerText = "You've been authenticated. Thanks."
+            return
+        }
+        var qr = qrcode(0, 'L');
+        qr.addData(qrCode);
+        qr.make();
+        document.getElementById('qr-code').innerHTML = qr.createImgTag(5, 5, 'QR Code');
+        document.getElementById('scan-message').innerText = "Scan the QR code below to authenticate."
+    }
+
+    // WebSocket connection
+    var ws = new WebSocket('ws://localhost:<%= port %>/<%= clientId %>');
+
+    ws.onopen = function() {
+      console.log('Connected to WebSocket server');
+    };
+
+    ws.onmessage = function(event) {
+      var data = JSON.parse(event.data);
+      updateQRCode(data.qr);
+    };
+
+    ws.onclose = function() {
+      console.log('Disconnected from WebSocket server');
+    };
+
+    window.onload = () => {
+        const qr = '<%= qr %>';
+        if (qr && qr.length > 0) {
+            updateQRCode(qr);
+        }
+    }
+  </script>
+</body>
+</html>

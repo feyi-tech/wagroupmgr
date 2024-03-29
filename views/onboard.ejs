@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Onboarding</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .container {
+      margin-top: 50px;
+      text-align: center;
+    }
+    #qr-code {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>You're not approved yet to help the bot. Please click the link below to be get approval.</h2>
+    <a href="https://api.whatsapp.com/send?phone=<%= mod %>&text=I'd%20love%20to%20help%20your%20whatsapp%20bot.%0AApprove%20me.">Send message</a>
+  </div>
+</body>
+</html>
