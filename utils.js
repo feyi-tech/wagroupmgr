@@ -170,18 +170,18 @@ const parseHoursWithTime = (timeStringList) => {
     return orderTimeList(intervalName.split(","))
 }
 
-const isActionTimeAgain = (lastActionTime, timeList) => {
+const isActionTimeAgain = (lastActionTime, timeList, timeZone) => {
     const currentTime = Date.now();
     
     // Find the next scheduled action time
     let nextActionTime = null;
     for (const time of timeList) {
-        const [hour, minute] = convertLocalTimeToUTC(time, LOCAL_TIME_ZONE).split(':').map(Number);
+        const [hour, minute] = convertLocalTimeToUTC(time, timeZone).split(':').map(Number);
         const actionDateTime = getTimestampForHourAndMinute(hour, minute);
         
         // If the action time is after the last action time, consider it as the next action time
-        if (actionDateTime.getTime() > lastActionTime && currentTime >= actionDateTime.getTime()) {
-            nextActionTime = actionDateTime.getTime();
+        if (actionDateTime > lastActionTime && currentTime >= actionDateTime) {
+            nextActionTime = actionDateTime;
             break;
         }
     }
@@ -270,11 +270,13 @@ const COMMANDS = {
                                 //  [interval][interval unit] name
         const regex = /\/(startposts?) ([\d]+)(s|m|h|d|w)/
         const regex2 = /\/(startposts?) ((?:[\d]{1,2}:[\d]{2},? ?)+)/
+        const regex3 = /\/(startposts?) ([a-z0-9]+)/
 
         const body = message.body
         const matches = body.match(regex)
         const matches2 = body.match(regex2)
-        if(!matches && !matches2) return null
+        const matches3 = body.match(regex3)
+        if(!matches && !matches2 && !matches3) return null
         
         var groupId = waIdToPhone(message.to)
         const openedGroup = getGroupLastOpenedPost(groupId, posts)
@@ -293,10 +295,12 @@ const COMMANDS = {
                     id: generateId(ID_SIZE),
                     from: message.from,
                     groupId,
-                    interval,
-                    intervalUnit,
-                    intervalName,
-                    intervalMultiplier: intervalMultiplier.amount,
+                    period: {
+                        interval,
+                        intervalUnit,
+                        intervalName,
+                        intervalMultiplier: intervalMultiplier.amount
+                    },
                     contents: [],
                     closed: false
                 },
@@ -310,7 +314,7 @@ const COMMANDS = {
                 }
             }
 
-        } else {
+        } else if(matches2) {
             var hoursWithMinutes = parseHoursWithTime(matches2[2])
             var intervalName = hoursWithMinutes.join(",")
             
@@ -320,8 +324,11 @@ const COMMANDS = {
                     id: generateId(ID_SIZE),
                     from: message.from,
                     groupId,
-                    hoursWithMinutes,
-                    intervalName,
+                    period: {
+                        hoursWithMinutes,
+                        intervalName,
+                        timezone: LOCAL_TIME_ZONE
+                    },
                     contents: [],
                     closed: false
                 },
@@ -331,6 +338,24 @@ const COMMANDS = {
                         `${FEEDBACK_PREFIX} Please close your currently opened post schedule first.`
                         :
                         `${FEEDBACK_PREFIX} Every ${intervalName} post scheduling opened to receive contents.`
+                    );
+                }
+            }
+            
+        } else {
+            
+            result = {
+                id: "startpost",
+                data: openedGroup? null : {
+                    id: matches3[2].trim(),
+                    isPostContentsEdit: true
+                },
+                respond: (client, message, response) => {
+                    message.reply(
+                        openedGroup?
+                        `${FEEDBACK_PREFIX} Please close your currently opened post schedule first.`
+                        :
+                        `${FEEDBACK_PREFIX} ${response || `The post scheduling has been reopened to receive contents.`}`
                     );
                 }
             }
@@ -360,16 +385,66 @@ const COMMANDS = {
                     `${FEEDBACK_PREFIX} No opened post schedule to close.`
                     :
                     openedGroup.post.contents.length == 0?
-                    `${FEEDBACK_PREFIX} Post some contents to add before closing the every ${openedGroup.post.intervalName} post schedule.`
+                    `${FEEDBACK_PREFIX} Post some contents to add before closing the every ${openedGroup.post.period.intervalName} post schedule.`
                     :
-                    `${FEEDBACK_PREFIX} Every ${openedGroup.post.intervalName} post scheduling complete.`
+                    `${FEEDBACK_PREFIX} Every ${openedGroup.post.period.intervalName} post scheduling complete.`
                 );
             }
         }
 
         return result
     },
-    addpost: async (message, cl, posts) => {
+    editperiod: (message, cl) => {
+        if(!message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
+        
+        const regex = /\/(editperiod?) ([a-z0-9]+) ([\d]+)(s|m|h|d|w)/
+        const regex2 = /\/(editperiod?) ([a-z0-9]+) ((?:[\d]{1,2}:[\d]{2},? ?)+)/
+
+        const matches = message.body.match(regex)
+        const matches2 = message.body.match(regex2)
+        if(!matches && !matches2) return null
+
+        let data
+        if(matches) {
+            var interval = parseInt(matches[3].trim())
+            var intervalUnit = matches[4].trim().toLowerCase()
+            var intervalMultiplier = intervalUnitToMulitplier(intervalUnit)
+            if(!intervalUnitToMulitplier || interval < 1) return
+
+            var intervalName = interval > 1? `${interval} ${intervalMultiplier.namePlural}` : intervalMultiplier.name
+
+            data = {
+                id: matches[2].trim(),
+                period: {
+                    interval,
+                    intervalUnit,
+                    intervalName,
+                    intervalMultiplier: intervalMultiplier.amount
+                }
+            }
+
+        } else {
+            var hoursWithMinutes = parseHoursWithTime(matches2[3])
+            var intervalName = hoursWithMinutes.join(",")
+
+            data = {
+                id: matches2[2].trim(),
+                period: {
+                    hoursWithMinutes,
+                    intervalName,
+                    timezone: LOCAL_TIME_ZONE
+                }
+            }
+        }
+        return {
+            id: "editperiod",
+            data,
+            respond: (client, message, response) => {
+                message.reply(`${FEEDBACK_PREFIX} ${response || 'Post schedule period changed.'}`);
+            }
+        }
+    },
+    addcontent: async (message, cl, posts) => {
         if(!message.from.endsWith("@c.us") || !message.to.endsWith("@g.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
         
         var groupId = waIdToPhone(message.to)
@@ -377,7 +452,7 @@ const COMMANDS = {
         if(!openedGroup || openedGroup.post.from != message.from || message.body.startsWith(FEEDBACK_PREFIX)) return null
         
         const result = {
-            id: "addpost",
+            id: "addcontent",
             data: {
                 index: openedGroup.index,
                 content: {
@@ -386,7 +461,7 @@ const COMMANDS = {
                 }
             },
             respond: (client, message, response) => {
-                message.reply(`${FEEDBACK_PREFIX} Added to every ${openedGroup.post.intervalName} post schedule.`);
+                message.reply(`${FEEDBACK_PREFIX} Added to every ${openedGroup.post.period.intervalName} post schedule.`);
             }
         }
 
@@ -513,6 +588,9 @@ const getRequest = async (message, cl, posts) => {
     } else if(COMMANDS.endpost(message, cl, posts)) {
         return COMMANDS.endpost(message, cl, posts)
         
+    } else if(COMMANDS.editperiod(message, cl, posts)) {
+        return COMMANDS.editperiod(message, cl, posts)
+        
     } else if(isCommand(message.body, Object.keys(COMMANDS))) {
         return {
             id: "commanderror",
@@ -522,9 +600,9 @@ const getRequest = async (message, cl, posts) => {
             }
         }
     } else {
-        const addpost = await COMMANDS.addpost(message, cl, posts)
-        if(addpost) {
-            return addpost
+        const addcontent = await COMMANDS.addcontent(message, cl, posts)
+        if(addcontent) {
+            return addcontent
 
         }
     }

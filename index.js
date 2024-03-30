@@ -101,6 +101,8 @@ const getPosts = () => {
     try {
         var info = fs.readFileSync("./data/posts.json")
         posts = JSON.parse(info)
+        //In case some posts were being made before the server shutdown, flag them back to not posting so they can be retried.
+        posts.forEach(post => post.posting = false);
         
         return posts
     } catch(e) {
@@ -111,9 +113,23 @@ const getPosts = () => {
 const startPost = (data) => {
     if(!data) return
     const all = getPosts()
-    all.push(data)
-    posts = all
-    fs.writeFileSync("./data/posts.json", JSON.stringify(all, null, '\t'))
+    if(data.isPostContentsEdit) {
+        const index = getObjectIndexById(data.id, all)
+        if(index == -1) {
+            return `The scheduled post(s) with ID, "${data.id}" does not exist.`
+
+        }
+        all[index].closed = false
+        posts = all
+        fs.writeFileSync("./data/posts.json", JSON.stringify(all, null, '\t'))
+        return `The ${all[index].period.intervalName} scheduled post(s) with ID, "${data.id}" has been reopened to receive contents.`
+
+    } else {
+        all.push(data)
+        posts = all
+        fs.writeFileSync("./data/posts.json", JSON.stringify(all, null, '\t'))
+        return null
+    }
 }
 const endPost = (data) => {
     if(!data) return
@@ -123,12 +139,28 @@ const endPost = (data) => {
     posts = all
     fs.writeFileSync("./data/posts.json", JSON.stringify(all, null, '\t'))
 }
-const addPost = (data) => {
+const addContent = (data) => {
     if(!data) return
     const all = getPosts()
     all[data.index].contents.push(data.content)
     posts = all
     fs.writeFileSync("./data/posts.json", JSON.stringify(all, null, '\t'))
+}
+const editPeriod = (data) => {
+    if(!data) return
+    const all = getPosts()
+    const dataIndex = getObjectIndexById(data.id, all)
+    
+    if(dataIndex == -1) {
+        return `The scheduled post(s) with ID, "${data.id}" does not exist.`
+    }
+
+    const initialIntervalName = all[dataIndex].period.intervalName
+    all[dataIndex].period = data.period
+    posts = all
+    fs.writeFileSync("./data/posts.json", JSON.stringify(all, null, '\t'))
+
+    return `The post interval of the scheduled post(s) with ID, "${data.id}" has been changed from ${initialIntervalName} to ${data.period.intervalName}.`
 }
 
 const lsPost = (client, message) => {
@@ -147,7 +179,7 @@ const lsPost = (client, message) => {
             date = null
         }
         
-        const text = `ID: ${post.id}\nInterval: ${post.intervalName}\nGroupId: ${post.groupId}\nLastPostedOn: ${date? date.toISOString() : "Still scheduling."}`
+        const text = `ID: ${post.id}\nInterval: ${post.period.intervalName}\nGroupId: ${post.groupId}\nLastPostedOn: ${date? date.toISOString() : "Still scheduling."}`
         
         client.sendMessage(message.from, text);
         message.reply(`${FEEDBACK_PREFIX} List of posts has been sent to your DM.`)
@@ -328,15 +360,19 @@ const startClients = () => {
                             req.respond(client, message)
 
                         } else if(req?.id === "startpost") {
-                            startPost(req.data);
-                            req.respond(client, message)
+                            const response = startPost(req.data);
+                            req.respond(client, message, response)
 
                         } else if(req?.id === "endpost") {
                             endPost(req.data);
                             req.respond(client, message)
 
-                        } else if(req?.id === "addpost") {
-                            addPost(req.data);
+                        } else if(req?.id === "editperiod") {
+                            const response = editPeriod(req.data);
+                            req.respond(client, message, response)
+
+                        } else if(req?.id === "addcontent") {
+                            addContent(req.data);
                             req.respond(client, message)
 
                         } else if(req?.id === "rmpost") {
@@ -398,11 +434,11 @@ const sendPosts = () => {
         //console.log("Ready:post ", phoneToGroupId(post.groupId), post.filepath)
         let isPostingTime
         const lastSentAt = post.last_sent_at || 0
-        if(post.hoursWithMinutes) {
-            isPostingTime = isActionTimeAgain(lastSentAt, post.hoursWithMinutes)
+        if(post.period.hoursWithMinutes) {
+            isPostingTime = isActionTimeAgain(lastSentAt, post.period.hoursWithMinutes, post.period.timezone)
 
         } else {
-            isPostingTime = now >= lastSentAt + (post.interval * post.intervalMultiplier)
+            isPostingTime = now >= lastSentAt + (post.period.interval * post.period.intervalMultiplier)
         }
         if(post.closed && !post.posting && post.last_sent_at && post.contents.length > 0 && isPostingTime) {
             all[i].posting = true
