@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node src/index.js",
+    "start": "node index.js",
     "pm-start": "pm2 start npm --name wagroupmgr -i 1 -- start && pm2 save",
     "pm-stop": "pm2 stop wagroupmgr && pm2 save",
     "pm-stopdel": "pm2 stop wagroupmgr && pm2 delete wagroupmgr && pm2 save"

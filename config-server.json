@@ -5,8 +5,8 @@
 	"mod": "2349024564270",
 	"loop_interval_milli": 10000,
 	"sendLinkIntervalMilli": 60000,
-	"serverBaseUrl": "http://localhost:7001/",
-	"webSocketUrl": "wss://localhost:7000",
+	"serverBaseUrl": "https://wamgr.feyitech.com/",
+	"webSocketUrl": "wss://wamgr-sock.feyitech.com",
 	"wwebVersion": "2.2407.3",
 	"feedbackGroup": "120363263449187400"
 }

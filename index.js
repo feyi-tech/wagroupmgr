@@ -14,20 +14,29 @@ var clients = {}
 var posts = []
 var currentWa = null
 
-console.log = () => {}
+//console.log = () => {}
 
 const config = JSON.parse(fs.readFileSync("config.json"))
 console.log("Admin: ", config.admin)
 
-/// Initialize WebSocket server
-const wss = new WebSocket.Server({ noServer: true });
+// Create WebSocket server
+const wss = new WebSocket.Server({
+    noServer: true, // We'll handle the upgrade manually
+});
 
 // Handle WebSocket upgrade
 const server = http.createServer();
 
+// Handle WebSocket upgrade manually
+server.on('upgrade', (request, socket, head) => {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+    });
+});
+/*
 server.on('upgrade', function upgrade(request, socket, head) {
   const pathname = request.url;
-  const clientId = pathname.substr(1); // Extract client ID from URL (removing the leading '/')
+  const clientId = pathname.replace("/sock", "").substr(1); // Extract client ID from URL (removing the leading '/')
   if (currentWa?.id != clientId) {
     // If client ID doesn't exist, close the connection
     socket.destroy();
@@ -37,7 +46,7 @@ server.on('upgrade', function upgrade(request, socket, head) {
   wss.handleUpgrade(request, socket, head, function done(ws) {
     wss.emit('connection', ws, request);
   });
-});
+});*/
 
 // Websocket Express server
 const SOCK_PORT = process.env.SOCK_PORT || config.sock_port;

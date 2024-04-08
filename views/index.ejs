@@ -24,8 +24,6 @@
 
   <!-- QR Code library -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator/qrcode.js"></script>
-  <!-- WebSocket library -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/websocket/1.0.31/websocket.min.js"></script>
   <script>
     // Function to update the QR code
     function updateQRCode(qrCode) {
@@ -41,21 +39,24 @@
         document.getElementById('scan-message').innerText = "Scan the QR code below to authenticate."
     }
 
-    // WebSocket connection
-    var ws = new WebSocket('<%= socketUrl %>/<%= clientId %>');
+    function connectWebSocket() {
+      var ws = new WebSocket('<%= socketUrl %>/<%= clientId %>');
 
-    ws.onopen = function() {
-      console.log('Connected to WebSocket server');
-    };
+      ws.onopen = function() {
+          console.log('Connected to WebSocket server');
+      };
 
-    ws.onmessage = function(event) {
-      var data = JSON.parse(event.data);
-      updateQRCode(data.qr);
-    };
+      ws.onmessage = function(event) {
+          var data = JSON.parse(event.data);
+          updateQRCode(data.qr);
+      };
 
-    ws.onclose = function() {
-      console.log('Disconnected from WebSocket server');
-    };
+      ws.onclose = function() {
+          console.log('Disconnected from WebSocket server. Reconnecting...');
+          //setTimeout(connectWebSocket, 2000); // Reconnect after specified interval
+      };
+  }
+  connectWebSocket();
 
     window.onload = () => {
         const qr = '<%= qr %>';
