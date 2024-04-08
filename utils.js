@@ -197,7 +197,7 @@ const COMMANDS_INFO = [
     `/endpost - signify that you're done with the posts being added to a schedule.`,
     `/rmpost index - remove a schedule post. "index" is the post position. Check /lspost`,
     `/lspost - list all schedule post.`,
-    `/addclient phoneNumber - add a new whatsapp web`,
+    `/startclient phoneNumber - add a new whatsapp web`,
     `/rmclient index - remove a client. "index" is the client position. Check /lsclient`,
     `/lsclient - list all client`
 
@@ -234,7 +234,7 @@ const getGroupLastOpenedPost = (groupId, posts) => {
 }
 
 const COMMANDS = {
-    commands: (message, cl) => {
+    commands: (message, cl, posts, group) => {
         if(!message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
         const regex = /\/(commands?)/
         const matches = message.body.match(regex)
@@ -244,11 +244,15 @@ const COMMANDS = {
             data: {
             },
             respond: (client, message, response) => {
-                message.reply(`${FEEDBACK_PREFIX} ${COMMANDS_INFO.join("\n\n")}`);
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${COMMANDS_INFO.join("\n\n")}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${COMMANDS_INFO.join("\n\n")}`);
+                }
             }
         }
     },
-    groupid: (message, cl) => {
+    groupid: (message, cl, posts, group) => {
         //console.log(`to: ${message.to} || ends: ${!message.to.endsWith("@g.us")} || !cl: ${!cl} || permitted: ${!["admin", "mod"].includes(cl.rank)}`)
         if(!message.to.endsWith("@g.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
                                 //  index
@@ -261,11 +265,16 @@ const COMMANDS = {
             data: {
             },
             respond: (client, message, response) => {
-                message.reply(`${FEEDBACK_PREFIX} ${waIdToPhone(message.to)}`);
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${waIdToPhone(message.to)}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${waIdToPhone(message.to)}`);
+                }
             }
         }
     },
-    startpost: (message, cl, posts) => {
+    startpost: (message, cl, posts, group) => {
         if(!message.from.endsWith("@c.us") || !message.to.endsWith("@g.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
                                 //  [interval][interval unit] name
         const regex = /\/(startposts?) ([\d]+)(s|m|h|d|w)/
@@ -305,6 +314,7 @@ const COMMANDS = {
                     closed: false
                 },
                 respond: (client, message) => {
+                    
                     message.reply(
                         openedGroup?
                         `${FEEDBACK_PREFIX} Please close your currently opened post schedule first.`
@@ -333,6 +343,7 @@ const COMMANDS = {
                     closed: false
                 },
                 respond: (client, message) => {
+                    
                     message.reply(
                         openedGroup?
                         `${FEEDBACK_PREFIX} Please close your currently opened post schedule first.`
@@ -351,6 +362,7 @@ const COMMANDS = {
                     isPostContentsEdit: true
                 },
                 respond: (client, message, response) => {
+                    
                     message.reply(
                         openedGroup?
                         `${FEEDBACK_PREFIX} Please close your currently opened post schedule first.`
@@ -363,7 +375,7 @@ const COMMANDS = {
 
         return result
     },
-    endpost: (message, cl, posts) => {
+    endpost: (message, cl, posts, group) => {
         if(!message.from.endsWith("@c.us") || !message.to.endsWith("@g.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
                                 //  [interval][interval unit] name
         const regex = /\/(endposts?)/
@@ -380,6 +392,7 @@ const COMMANDS = {
                 index: openedGroup.index
             },
             respond: (client, message) => {
+                
                 message.reply(
                     !openedGroup?
                     `${FEEDBACK_PREFIX} No opened post schedule to close.`
@@ -394,7 +407,7 @@ const COMMANDS = {
 
         return result
     },
-    editperiod: (message, cl) => {
+    editperiod: (message, cl, posts, group) => {
         if(!message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
         
         const regex = /\/(editperiod?) ([a-z0-9]+) ([\d]+)(s|m|h|d|w)/
@@ -440,11 +453,12 @@ const COMMANDS = {
             id: "editperiod",
             data,
             respond: (client, message, response) => {
+                
                 message.reply(`${FEEDBACK_PREFIX} ${response || 'Post schedule period changed.'}`);
             }
         }
     },
-    addcontent: async (message, cl, posts) => {
+    addcontent: async (message, cl, posts, group) => {
         if(!message.from.endsWith("@c.us") || !message.to.endsWith("@g.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
         
         var groupId = waIdToPhone(message.to)
@@ -461,6 +475,7 @@ const COMMANDS = {
                 }
             },
             respond: (client, message, response) => {
+                
                 message.reply(`${FEEDBACK_PREFIX} Added to every ${openedGroup.post.period.intervalName} post schedule.`);
             }
         }
@@ -479,7 +494,7 @@ const COMMANDS = {
 
         return result
     },
-    lspost: (message, cl) => {
+    lspost: (message, cl, posts, group) => {
         if(!message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
         const regex = /\/(lsposts?)/
         const matches = message.body.match(regex)
@@ -489,11 +504,16 @@ const COMMANDS = {
             data: {
             },
             respond: (client, message, response) => {
-                client.sendMessage(message.from, `${FEEDBACK_PREFIX} ${response || 'Empty'}`);
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Empty'}`);
+                } else {
+                    client.sendMessage(message.from, `${FEEDBACK_PREFIX} ${response || 'Empty'}`);
+                }
             }
         }
     },
-    rmpost: (message, cl) => {
+    rmpost: (message, cl, posts, group) => {
         if(!message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
                                 //  index
         const regex = /\/(rmpost?) ([a-z0-9]+)/
@@ -505,11 +525,16 @@ const COMMANDS = {
                 id: matches[2].trim()
             },
             respond: (client, message, response) => {
-                message.reply(`${FEEDBACK_PREFIX} ${response || 'Post removed'}`);
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Post removed'}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${response || 'Post removed'}`);
+                }
             }
         }
     },
-    lscontent: (message, cl) => {
+    lscontent: (message, cl, posts, group) => {
         if(!message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
         const regex = /\/(lscontents?) ([a-z0-9]+)/
         const matches = message.body.match(regex)
@@ -520,11 +545,16 @@ const COMMANDS = {
                 id: matches[2].trim()
             },
             respond: (client, message, response) => {
-                client.sendMessage(message.from, `${FEEDBACK_PREFIX} ${response || 'Empty'}`);
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Empty'}`);
+                } else {
+                    client.sendMessage(message.from, `${FEEDBACK_PREFIX} ${response || 'Empty'}`);
+                }
             }
         }
     },
-    rmcontent: (message, cl) => {
+    rmcontent: (message, cl, posts, group) => {
         if(!message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
                                 //  index
         const regex = /\/(rmcontent?) ([a-z0-9]+)_([a-z0-9]+)/
@@ -537,70 +567,328 @@ const COMMANDS = {
                 contentId: matches[3].trim()
             },
             respond: (client, message, response) => {
-                message.reply(`${FEEDBACK_PREFIX} ${response || 'Content removed'}`);
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Content removed'}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${response || 'Content removed'}`);
+                }
             }
         }
     },
-    addclient: (message, cl) => {
-        if(!message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
-                                //  index
-        const regex = /\/(addclient)/
+    startclient: (message, cl, posts, group) => {
+        if((
+            !message?.quotedMsg?.from && !message?.quotedParticipant && !message?._data?.quotedMsg?.from && !message?._data?.quotedParticipant
+        ) || !message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
+        const regex = /\/(startclient?)/
         const matches = message.body.match(regex)
-        const quotedMessageSender = message?.quotedMsg?.from
+        const quotedMessageSender = message?.quotedMsg?.from || message?.quotedParticipant || message?._data?.quotedMsg?.from || message?._data?.quotedParticipant
         if(!matches || !quotedMessageSender) return null
         return {
-            id: "addclient",
+            id: "startclient",
             data: {
                 clientId: waIdToPhone(quotedMessageSender),
                 rank: cl.rank === "admin"? "mod" : "user"
             },
+            respond: (client, response, msg) => {
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Client added'}`);
+                } else {
+                    if(msg) {
+                        msg.reply(`${FEEDBACK_PREFIX} ${response || 'Client added'}`);
+    
+                    } else {
+                        client.sendMessage(message.from, `${FEEDBACK_PREFIX} ${response || 'Client added'}`);
+                    }
+                }
+            }
+        }
+    },
+    rmclient: (message, cl, posts, group) => {
+        return null
+        if(!message?.quotedMsg?.from && !message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
+                                //  index
+        const regex = /\/(rmclient?)/
+        const matches = message.body.match(regex)
+        if(!matches) return null
+        return {
+            id: "rmclient",
+            data: {
+                clientId: waIdToPhone(quotedMessageSender)
+            },
             respond: (client, message, response) => {
-                client.sendMessage(message.from, response || 'Client added');
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Client removed'}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${response || 'Client removed'}`);
+                }
+            }
+        }
+    },
+    uploadcontacts: (message, cl, posts, group) => {
+        if(!message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
+                                //  index
+        const regex = /\/(uploadcontacts?|ulcontacts?)\s+(.*)/
+        const matches = message.body.match(regex)
+        if(!matches) return null
+        return {
+            id: "uploadcontacts",
+            data: {
+                regex: matches[2]
+            },
+            respond: (client, message, response) => {
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Contacts shared'}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${response || 'Contacts shared'}`);
+                }
+            }
+        }
+    },
+    downloadcontacts: (message, cl, posts, group) => {
+        if(!message.from.endsWith("@c.us") || !cl || !["admin", "mod"].includes(cl.rank)) return null
+                                //  index
+        const regex = /\/(downloadcontacts?|dlcontacts?)/
+        const matches = message.body.match(regex)
+        if(!matches) return null
+        return {
+            id: "downloadcontacts",
+            data: {},
+            respond: (client, message, response) => {
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Contacts shared'}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${response || 'Contacts downloaded'}`);
+                }
+            }
+        }
+    },
+    addmembers: (message, cl, posts, group) => {
+        if(!message.from.endsWith("@c.us") || (!message.to.endsWith("@g.us") && !message?._data?.quotedMsg?.body) || !cl || !["admin"].includes(cl.rank)) return null
+                                //  index
+        const regex = /\/(addmembers?)\s+(\d*)\s+(.*)/
+        const matches = message.body.match(regex)
+        if(!matches) return null
+
+        var groupId = message.to? waIdToPhone(message.to) : message?._data?.quotedMsg.body
+        var maxAdded = parseInt(matches[2].trim())
+        var contactRegex = matches[3]
+
+        return {
+            id: "addmembers",
+            data: {
+                groupId, maxAdded, contactRegex
+            },
+            respond: (client, message, response) => {
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                }
+            }
+        }
+    },
+    setgroup: (message, cl, posts, group) => {
+        if(!message.from.endsWith("@c.us") || !message.to.endsWith("@g.us") || !cl || !["admin"].includes(cl.rank)) return null
+                                //  index
+        const regex = /\/(setgroup)/
+        const matches = message.body.match(regex)
+        if(!matches) return null
+
+        var groupId = waIdToPhone(message.to)
+
+        return {
+            id: "setgroup",
+            data: {
+                groupId
+            },
+            respond: (client, message, response) => {
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                }
+            }
+        }
+    },
+    unsetgroup: (message, cl, posts, group) => {
+        if(!message.from.endsWith("@c.us") || !cl || !["admin"].includes(cl.rank)) return null
+                                //  index
+        const regex = /\/(unsetgroup)/
+        const matches = message.body.match(regex)
+        if(!matches) return null
+
+        var groupId = waIdToPhone(message.to)
+
+        return {
+            id: "unsetgroup",
+            data: {},
+            respond: (client, message, response) => {
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                }
+            }
+        }
+    },
+    welcome: (message, cl, posts, group) => {
+        if(!message.from.endsWith("@c.us") || !cl || !message?._data?.quotedMsg?.body || !["admin", "mod"].includes(cl.rank)) return null
+                                //  index
+        const regex = /\/(welcome)/
+        const matches = message.body.match(regex)
+        if(!matches) return null
+
+        var groupId = waIdToPhone(message.to)
+
+        return {
+            id: "welcome",
+            data: {
+                groupId,
+                welcomeMessage: message?._data?.quotedMsg?.body
+            },
+            respond: (client, message, response) => {
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                }
+            }
+        }
+    },
+    clocksize: (message, cl, posts, group) => {
+        if(!message.from.endsWith("@c.us") || !cl || !["admin"].includes(cl.rank)) return null
+                                //  index
+        const regex = /\/(clocksize) ([\d]+)/
+        const matches = message.body.match(regex)
+        if(!matches) return null
+
+        var groupId = waIdToPhone(message.to)
+
+        return {
+            id: "clocksize",
+            data: {
+                clocksize: parseInt(matches[2].trim()) * 1000
+            },
+            respond: (client, message, response) => {
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                }
+            }
+        }
+    },
+    //Use to copy the members already added to source group to destination group mebers added log so that only members not added
+    // in the source group will be added in the destination group during adding.
+    linkgroup: (message, cl, posts, group) => {
+        if(!message.from.endsWith("@c.us") || !cl || !["admin"].includes(cl.rank)) return null
+                                //  index
+        const regex = /\/(linkgroup) ([\d]+)/
+        const matches = message.body.match(regex)
+        if(!matches) return null
+
+        var groupId = waIdToPhone(message.to)
+
+        return {
+            id: "linkgroup",
+            data: {
+                sourceGroup: matches[2].trim(),
+                destinationGroup: groupId
+            },
+            respond: (client, message, response) => {
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} ${response || 'Ok.'}`);
+                }
             }
         }
     },
 }
-const getRequest = async (message, cl, posts) => {
-    if(COMMANDS.commands(message, cl, posts)) {
-        return COMMANDS.commands(message, cl, posts)
+const getRequest = async (message, cl, posts, group) => {
+    if(COMMANDS.commands(message, cl, posts, group)) {
+        return COMMANDS.commands(message, cl, posts, group)
 
-    } else if(COMMANDS.lspost(message, cl, posts)) {
-        return COMMANDS.lspost(message, cl, posts)
+    } else if(COMMANDS.lspost(message, cl, posts, group)) {
+        return COMMANDS.lspost(message, cl, posts, group)
 
-    } else if(COMMANDS.rmpost(message, cl, posts)) {
-        return COMMANDS.rmpost(message, cl, posts)
+    } else if(COMMANDS.rmpost(message, cl, posts, group)) {
+        return COMMANDS.rmpost(message, cl, posts, group)
 
-    } else if(COMMANDS.lscontent(message, cl, posts)) {
-        return COMMANDS.lscontent(message, cl, posts)
+    } else if(COMMANDS.lscontent(message, cl, posts, group)) {
+        return COMMANDS.lscontent(message, cl, posts, group)
 
-    } else if(COMMANDS.rmcontent(message, cl, posts)) {
-        return COMMANDS.rmcontent(message, cl, posts)
+    } else if(COMMANDS.rmcontent(message, cl, posts, group)) {
+        return COMMANDS.rmcontent(message, cl, posts, group)
 
-    } else if(COMMANDS.addclient(message, cl, posts)) {
-        return COMMANDS.addclient(message, cl, posts)
+    } else if(COMMANDS.startclient(message, cl, posts, group)) {
+        return COMMANDS.startclient(message, cl, posts, group)
 
-    } else if(COMMANDS.groupid(message, cl, posts)) {
-        return COMMANDS.groupid(message, cl, posts)
+    } else if(COMMANDS.rmclient(message, cl, posts, group)) {
+        return COMMANDS.rmclient(message, cl, posts, group)
+
+    } else if(COMMANDS.groupid(message, cl, posts, group)) {
+        return COMMANDS.groupid(message, cl, posts, group)
         
-    } else if(COMMANDS.startpost(message, cl, posts)) {
-        return COMMANDS.startpost(message, cl, posts)
+    } else if(COMMANDS.startpost(message, cl, posts, group)) {
+        return COMMANDS.startpost(message, cl, posts, group)
         
-    } else if(COMMANDS.endpost(message, cl, posts)) {
-        return COMMANDS.endpost(message, cl, posts)
+    } else if(COMMANDS.endpost(message, cl, posts, group)) {
+        return COMMANDS.endpost(message, cl, posts, group)
         
-    } else if(COMMANDS.editperiod(message, cl, posts)) {
-        return COMMANDS.editperiod(message, cl, posts)
+    } else if(COMMANDS.editperiod(message, cl, posts, group)) {
+        return COMMANDS.editperiod(message, cl, posts, group)
+        
+    } else if(COMMANDS.uploadcontacts(message, cl, posts, group)) {
+        return COMMANDS.uploadcontacts(message, cl, posts, group)
+        
+    } else if(COMMANDS.downloadcontacts(message, cl, posts, group)) {
+        return COMMANDS.downloadcontacts(message, cl, posts, group)
+        
+    } else if(COMMANDS.addmembers(message, cl, posts, group)) {
+        return COMMANDS.addmembers(message, cl, posts, group)
+        
+    } else if(COMMANDS.setgroup(message, cl, posts, group)) {
+        return COMMANDS.setgroup(message, cl, posts, group)
+        
+    } else if(COMMANDS.unsetgroup(message, cl, posts, group)) {
+        return COMMANDS.unsetgroup(message, cl, posts, group)
+        
+    } else if(COMMANDS.welcome(message, cl, posts, group)) {
+        return COMMANDS.welcome(message, cl, posts, group)
+        
+    } else if(COMMANDS.clocksize(message, cl, posts, group)) {
+        return COMMANDS.clocksize(message, cl, posts, group)
+        
+    } else if(COMMANDS.linkgroup(message, cl, posts, group)) {
+        return COMMANDS.linkgroup(message, cl, posts, group)
         
     } else if(isCommand(message.body, Object.keys(COMMANDS))) {
         return {
             id: "commanderror",
             data: {},
             respond: (client, message, response) => {
-                message.reply(`${FEEDBACK_PREFIX} Command error. use /commands to check how to use each command.`);
+                
+                if(group) {
+                    client.sendMessage(phoneToGroupId(group), `${FEEDBACK_PREFIX} Command error. use /commands to check how to use each command.`);
+                } else {
+                    message.reply(`${FEEDBACK_PREFIX} Command error. use /commands to check how to use each command.`);
+                }
             }
         }
     } else {
-        const addcontent = await COMMANDS.addcontent(message, cl, posts)
+        const addcontent = await COMMANDS.addcontent(message, cl, posts, group)
         if(addcontent) {
             return addcontent
 

@@ -1,7 +1,13 @@
 {
-    "web_port": 7001,
-    "sock_port": 7000,
-    "admin": "2348130729216",
-    "mod": "2348130729216",
-    "loop_interval_milli": 3000
+	"web_port": 7001,
+	"sock_port": 7000,
+	"admin": "2348130729216",
+	"mod": "2348130729216",
+	"loop_interval_milli": 5000,
+	"sendLinkIntervalMilli": 60000,
+	"serverBaseUrl": "https://wamgr.feyitech.com/",
+	"webSocketUrl": "ws://wamgr-socket.feyitech.com",
+	"wwebVersion": "2.2407.3",
+	"feedbackGroup": "120363263449187400",
+	"welcomeMessage": "🤖: Client with ID. 2348130729216 successfully logged in!."
 }

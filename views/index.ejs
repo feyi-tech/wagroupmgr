@@ -42,7 +42,7 @@
     }
 
     // WebSocket connection
-    var ws = new WebSocket('ws://localhost:<%= port %>/<%= clientId %>');
+    var ws = new WebSocket('<%= socketUrl %>/<%= clientId %>');
 
     ws.onopen = function() {
       console.log('Connected to WebSocket server');
