@@ -587,7 +587,7 @@ const runClient = (clientId) => {
             }),
             puppeteer: {
                 executablePath: getChromePath(),
-                headless: false,
+                headless: true,
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
